@@ -23,9 +23,6 @@ public class TrazzleConsoleClient implements ITrazzleClientListener {
         this.project = project;
 
         tabbedPane = (JTabbedPane) content.getRootPanel().getComponent(0);
-
-        addClient(-1);
-
     }
 
     public void log(final Integer clientId,final  String message,final  String level,final  String stacktrace,final  Number timestamp,final  Integer stackindex) {
@@ -76,6 +73,30 @@ public class TrazzleConsoleClient implements ITrazzleClientListener {
                         {
                             tabbedPane.remove(i);
                             consoles.remove(clientId);
+                        }
+                        i++;
+                    }
+                }
+            }
+        };
+        SwingUtilities.invokeLater(doWorkRunnable);
+    }
+
+    public void addSwfUrl(final Integer clientId, final String url) {
+        Runnable doWorkRunnable = new Runnable() {
+            public void run() {
+                TrazzleConsoleClientWindow console = consoles.get(clientId);
+                if(console!=null)
+                {
+                    console.setName(url);
+                    Integer i = 0;
+                    while(i<tabbedPane.getTabCount())
+                    {
+                        Component c = tabbedPane.getComponentAt(i);
+                        Component d = console.getParent();
+                        if(tabbedPane.getComponentAt(i)==console)
+                        {
+                            tabbedPane.setTitleAt(i, url);
                         }
                         i++;
                     }

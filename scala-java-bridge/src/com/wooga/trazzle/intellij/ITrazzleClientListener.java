@@ -11,4 +11,5 @@ public interface ITrazzleClientListener {
     void log(Integer clientId, String message, String lebel, String stacktrace, Number timestamp, Integer stackindex);
     void addClient(Integer clientId);
     void removeClient(Integer clientId);
+    void addSwfUrl(Integer clientId, String url);
 }

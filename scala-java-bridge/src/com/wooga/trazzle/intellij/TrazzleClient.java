@@ -36,4 +36,8 @@ public class TrazzleClient implements ITrazzleLogClient {
     public void removeClient(Integer clientId) {
         client.removeClient(clientId);
     }
+
+    public void addSwfUrl(Integer clientId, String url) {
+        client.addSwfUrl(clientId, url);
+    }
 }
