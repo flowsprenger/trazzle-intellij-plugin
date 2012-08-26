@@ -1,7 +1,7 @@
 <idea-plugin version="2">
-  <name>TrazzleConsole</name>
+  <name>TrazzleConsole2</name>
   <description>console for trazzle logger</description>
-  <version>0.1</version>
+  <version>0.01</version>
   <vendor>wooga</vendor>
   <idea-version since-build="8000"/>
 

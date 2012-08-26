@@ -1,19 +1,20 @@
 package com.wooga.intellij.trazzle;
 
-import com.intellij.ide.OpenFileXmlRpcHandler;
+import com.intellij.execution.impl.ConsoleViewImpl;
+import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Vector;
 
 public class TrazzleConsoleClientWindow extends JPanel implements ActionListener{
 
-    private JList<RemoteLogElement> list;
-    private DefaultListModel listModel;
-    private DefaultListModel filteredListModel;
+    private Vector<RemoteLogElement> allMessages  = new Vector<RemoteLogElement>();
     private String currentFilter = null;
     private Project project;
+    final private ConsoleViewImpl console;
 
     public TrazzleConsoleClientWindow(Integer clientId, final Project project) {
         this.project = project;
@@ -21,74 +22,68 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setName(clientId.toString());
 
-        JScrollPane jScrollPane = new JScrollPane();
-        jScrollPane.setPreferredSize(new Dimension(392, 245));
-
-        list = new JList<RemoteLogElement>();
-        list.setCellRenderer(new TrazzleLogMessageCellRenderer());
-        listModel = new DefaultListModel();
-        list.setLayoutOrientation(JList.VERTICAL);
-        list.setSize(new Dimension(500, 100));
-        list.setModel(listModel);
-        jScrollPane.setViewportView(list);
-
         JTextField textField = new JTextField("",50);
         textField.setMaximumSize( textField.getPreferredSize() );
         textField.addActionListener(this);
         add(textField);
-        add(jScrollPane);
 
-        MouseListener mouseListener = new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    int index = list.locationToIndex(e.getPoint());
-                    if(index!=-1)
-                    {
-                        RemoteLogElement element = list.getModel().getElementAt(index);
-                        System.out.println("Double clicked on Item " + element.stacktrace);
-                        if(element.stacktrace!=null)
-                        {
-                            String stackElement = element.stacktrace.split("\n")[element.stackindex+1];
-                            String fileAndLine = stackElement.substring(stackElement.indexOf('[')+1,stackElement.indexOf(']'));
-                            String line = fileAndLine.substring(fileAndLine.lastIndexOf(":")+1);
-                            String file = fileAndLine.substring(0, fileAndLine.lastIndexOf(":"));
-                            OpenFileXmlRpcHandler fileHandler = new OpenFileXmlRpcHandler();
-                            fileHandler.openAndNavigate(file, Integer.parseInt(line)-1, 0);
-                        }
-                    }
-                }
-                if(e.isControlDown())
-                {
-                    int index = list.locationToIndex(e.getPoint());
-                    if(index!=-1)
-                    {
-                        RemoteLogElement element = list.getModel().getElementAt(index);
-                    }
-                }
+        console = new ConsoleViewImpl(project, true);
+        console.setSize(100,100);
+        Runnable doWorkRunnable = new Runnable() {
+            public void run() {
+                add(console.getComponent());
             }
         };
-        list.addMouseListener(mouseListener);
+        SwingUtilities.invokeLater(doWorkRunnable);
     }
 
     public void addElement(RemoteLogElement remoteLogElement) {
-        listModel.addElement(remoteLogElement);
+
+        allMessages.add(remoteLogElement);
+        applyFilterAndAdd(remoteLogElement);
+    }
+
+    private void applyFilterAndAdd(RemoteLogElement remoteLogElement) {
         if(currentFilter != null)
         {
             if(remoteLogElement.toString().matches(currentFilter))
             {
-                filteredListModel.addElement(remoteLogElement);
-                if(list.getSelectedIndex()==-1)
-                {
-                    list.ensureIndexIsVisible(filteredListModel.size() - 1);
-                }
+                addLogMessageToConsole(remoteLogElement);
             }
         }else{
-            if(list.getSelectedIndex()==-1)
-            {
-                list.ensureIndexIsVisible(listModel.size() - 1);
-            }
+            addLogMessageToConsole(remoteLogElement);
         }
+    }
 
+    private void addLogMessageToConsole(RemoteLogElement remoteLogElement) {
+        console.print(remoteLogElement.toString() + " (", errorLevelToConsoleViewContentType(remoteLogElement.level));
+        if(remoteLogElement.stacktrace!=null)
+        {
+            String stackElement = remoteLogElement.stacktrace.split("\n")[remoteLogElement.stackindex+1];
+            String fileAndLine = stackElement.substring(stackElement.indexOf('[')+1,stackElement.indexOf(']'));
+            String line = fileAndLine.substring(fileAndLine.lastIndexOf(":")+1);
+            String file = fileAndLine.substring(0, fileAndLine.lastIndexOf(":"));
+            console.printHyperlink(file+":"+line, new TrazzleHyperLinkInfo(file, line));
+        }
+        console.print(")\n", ConsoleViewContentType.NORMAL_OUTPUT);
+        console.scrollToEnd();
+    }
+
+    private ConsoleViewContentType errorLevelToConsoleViewContentType(String level) {
+        switch(level.getBytes()[0])
+        {
+            case 'e': // error
+            case 'f': // fatal
+            case 'c': // critical
+                return ConsoleViewContentType.ERROR_OUTPUT;
+            case 'n': // notice
+            case 'w':  // warning
+                return ConsoleViewContentType.USER_INPUT;
+            case 'i':  // info
+            case 'd':  // debug
+                return ConsoleViewContentType.NORMAL_OUTPUT;
+        }
+        return ConsoleViewContentType.NORMAL_OUTPUT;
     }
 
     public void actionPerformed(ActionEvent e) {
@@ -96,23 +91,16 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
     }
 
     public void filter(String prefix) {
+        console.clear();
         if(prefix=="")
         {
             currentFilter = null;
-            list.setModel(listModel);
+        }else{
+            currentFilter = ".*"+prefix+".*";
         }
 
-        currentFilter = ".*"+prefix+".*";
-        filteredListModel = new DefaultListModel();
-
-        for (int i = 0; i < listModel.getSize(); i++) {
-            String item = listModel.getElementAt(i).toString();
-
-            if (item.matches(currentFilter)) {
-                filteredListModel.addElement(listModel.getElementAt(i));
-            }
+        for( int i=0; i<allMessages.size(); i++) {
+            applyFilterAndAdd(allMessages.elementAt(i));
         }
-
-        list.setModel(filteredListModel);
     }
 }

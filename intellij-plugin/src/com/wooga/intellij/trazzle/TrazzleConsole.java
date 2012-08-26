@@ -36,7 +36,6 @@ public class TrazzleConsole implements ProjectComponent {
 
         myToolWindow.getContentManager().addContent(content);
 
-        //new FlashLogMessage();
         new TrazzleConsoleClient(consoleWindow, project);
 
     }
