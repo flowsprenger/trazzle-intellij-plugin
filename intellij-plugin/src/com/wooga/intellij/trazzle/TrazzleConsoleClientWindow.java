@@ -5,6 +5,7 @@ import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Vector;
@@ -15,6 +16,7 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
     private String currentFilter = null;
     private Project project;
     final private ConsoleViewImpl console;
+    private TrazzleConsoleTabControls controls;
 
     public TrazzleConsoleClientWindow(Integer clientId, final Project project) {
         this.project = project;
@@ -22,10 +24,13 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setName(clientId.toString());
 
-        JTextField textField = new JTextField("",50);
-        textField.setMaximumSize( textField.getPreferredSize() );
-        textField.addActionListener(this);
-        add(textField);
+        controls = new TrazzleConsoleTabControls();
+        controls.panel.setMinimumSize(new Dimension(100,24));
+        controls.panel.setMaximumSize(new Dimension(3000,24));
+        add(controls.panel);
+
+        controls.filterText.addActionListener(this);
+        controls.pausePlayToggleButton.addActionListener(this);
 
         console = new ConsoleViewImpl(project, true);
         console.setSize(100,100);
@@ -66,7 +71,10 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
             console.printHyperlink(file+":"+line, new TrazzleHyperLinkInfo(file, line));
         }
         console.print(")\n", ConsoleViewContentType.NORMAL_OUTPUT);
-        console.scrollToEnd();
+        if(console.getAutoscrolls()==true)
+        {
+            console.scrollToEnd();
+        }
     }
 
     private ConsoleViewContentType errorLevelToConsoleViewContentType(String level) {
@@ -87,7 +95,20 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
     }
 
     public void actionPerformed(ActionEvent e) {
-        filter(e.getActionCommand());
+        if(e.getSource() == controls.filterText)
+        {
+            filter(e.getActionCommand());
+        }else if(e.getSource() == controls.pausePlayToggleButton){
+            if(e.getActionCommand() == "||")
+            {
+                controls.pausePlayToggleButton.setText(">");
+                console.setAutoscrolls(false);
+                console.getEditor().getCaretModel().moveToOffset(0);
+            }else{
+                controls.pausePlayToggleButton.setText("||");
+                console.setAutoscrolls(true);
+            }
+        }
     }
 
     public void filter(String prefix) {

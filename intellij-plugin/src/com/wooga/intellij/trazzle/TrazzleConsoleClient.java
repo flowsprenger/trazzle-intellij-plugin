@@ -23,7 +23,6 @@ public class TrazzleConsoleClient implements ITrazzleClientListener {
         this.project = project;
 
         tabbedPane = (JTabbedPane) content.getRootPanel().getComponent(0);
-        tabbedPane.remove(0);
 
         addClient(-1);
 
