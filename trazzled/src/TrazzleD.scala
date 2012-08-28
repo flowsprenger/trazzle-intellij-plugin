@@ -46,10 +46,10 @@ package com.wooga.trazzle.intellij{
 
     def act() {
       val port = 3457
-
+      StdOutput.configureClient(client);
       StdOutput.start()
       FlashLogger.start()
-      //PolicyFileServer.start()
+      PolicyFileServer.start()
 
       try {
 
@@ -58,7 +58,7 @@ package com.wooga.trazzle.intellij{
         listener.setReceiveBufferSize(10)
         var numClients = 1
 
-        StdOutput !(-1, "Listening on port " + port, null, null)
+        StdOutput !(-1, "Listening on port " + port)
 
         while (true) {
 
@@ -73,7 +73,7 @@ package com.wooga.trazzle.intellij{
       }
       catch {
         case e: IOException =>
-          StdOutput !(-1, "Could not listen on port: " + port + ".", null, null)
+          StdOutput !(-1, "Could not listen on port: " + port + ".")
           System.exit(-1)
       }
     }
@@ -86,7 +86,6 @@ package com.wooga.trazzle.intellij{
       try {
         syncronizer.start()
 
-
         var inputBuffer = new BufferedInputStream(socket.getInputStream()) //new BufferedInputStream(socket.getInputStream())
 
         val header: Array[Byte] = new Array[Byte](9)
@@ -95,25 +94,19 @@ package com.wooga.trazzle.intellij{
         {
           client.addClient(clientId)
 
-          StdOutput !(clientId, "Client connected from " + socket.getInetAddress() + ":" + socket.getPort, null, null)
-          StdOutput !(clientId, "assigning id " + clientId, null, null)
+          StdOutput !(clientId, "Client connected from " + socket.getInetAddress() + ":" + socket.getPort)
+          StdOutput !(clientId, "assigning id " + clientId)
 
           while (true) {
 
             try {
               val message = new ActionMessage();
               inputBuffer.read(header, 0, 4)
-              val buffer = ByteBuffer.wrap(header, 0, 4);
-              val length = buffer.getInt;
-
-              val messageInput = new Array[Byte](length)
-              inputBuffer.read(messageInput, 0, length)
-
-              var byteArrayBuffer = new ByteArrayInputStream(messageInput);
 
               var blazeDeserializer: MessageDeserializer = new AmfMessageDeserializer
-              blazeDeserializer.initialize(new SerializationContext, byteArrayBuffer, new AmfTrace)
+              blazeDeserializer.initialize(new SerializationContext, inputBuffer, new AmfTrace)
               blazeDeserializer.readMessage(message, new ActionContext())
+
               for (body <- message.getBodies.toList) {
                 syncronizer ! body.asInstanceOf[MessageBody]
               }
@@ -129,7 +122,6 @@ package com.wooga.trazzle.intellij{
             }
           }
         }else{
-          println(header)
           val policy = "<?xml version=\"1.0\"?> <!DOCTYPE cross-domain-policy SYSTEM \"/xml/dtds/cross-domain-policy.dtd\"> <cross-domain-policy><site-control permitted-cross-domain-policies=\"master-only\"/><allow-access-from domain=\"*\" to-ports=\"3457\" /> </cross-domain-policy> ";
           socket.getOutputStream.write(policy.getBytes(Charset.forName("UTF-8")))
           socket.getOutputStream.flush
@@ -140,14 +132,14 @@ package com.wooga.trazzle.intellij{
       }
       catch {
         case e: SocketException =>
-          StdOutput !(clientId, e, null, null)
+          StdOutput !(clientId, e)
 
         case e: IOException =>
-          StdOutput !(clientId, e.printStackTrace(), null, null)
+          StdOutput !(clientId, e.printStackTrace())
 
         case e: EOFException =>
         case e =>
-          StdOutput !(clientId, "Unknown error " + e, null, null)
+          StdOutput !(clientId, "Unknown error " + e)
       } finally {
         syncronizer ! Stop
         socket.close()
@@ -181,7 +173,7 @@ package com.wooga.trazzle.intellij{
               out.write(outBuffer.toByteArray)
               outBuffer.reset
 
-              StdOutput !(clientId, location + " changed informing listener", null, null)
+              StdOutput !(clientId, location + " changed informing listener")
             case message: MessageBody =>
               handleMessage(message)
 
@@ -190,7 +182,7 @@ package com.wooga.trazzle.intellij{
                 observer ! Stop
               }
               exit
-            case _ => StdOutput !(clientId, "receive back", null, null)
+            case _ => StdOutput !(clientId, "receive back")
           }
         }
       }
@@ -209,7 +201,7 @@ package com.wooga.trazzle.intellij{
               observer.start()
             }
           case "InspectionService.inspectObject_metadata" =>
-            StdOutput !(clientId, "Inspect : " + printAttrValues(message.getData), null, null)
+            StdOutput !(clientId, "Inspect : " + printAttrValues(message.getData))
           case "FileObservingService.stopObservingFile" =>
             val file = message.getData.asInstanceOf[Array[Object]](0).toString
             if (fileObservers.get(file) != None) {
@@ -232,7 +224,7 @@ package com.wooga.trazzle.intellij{
 
   class FileObserver(clientId: Int, location: String, listener: Actor) extends Actor {
     def act {
-      StdOutput !(clientId, "Starting FileObserver " + location, null, null)
+      StdOutput !(clientId, "Starting FileObserver " + location)
 
       val watcher = FileSystems.getDefault().newWatchService();
       val path = FileSystems.getDefault().getPath(location);
@@ -247,19 +239,19 @@ package com.wooga.trazzle.intellij{
             try {
               val events = key.pollEvents();
               for (val event <- events.asInstanceOf[ArrayList[WatchEvent[Path]]]) {
-                StdOutput !(clientId, event.context().getFileName + " changed" + event.kind().name() + " " + StandardWatchEventKinds.ENTRY_MODIFY, null, null)
+                StdOutput !(clientId, event.context().getFileName + " changed" + event.kind().name() + " " + StandardWatchEventKinds.ENTRY_MODIFY)
                 listener ! location
               }
               key.reset
             } catch {
               case e =>
-                StdOutput !(clientId, "watching " + location + " fails due to exception " + e, null, null)
+                StdOutput !(clientId, "watching " + location + " fails due to exception " + e)
             }
           case Stop =>
             key.cancel
             watcher.close
             sched ! Stop
-            StdOutput !(clientId, "Stopping FileObserver " + location, null, null)
+            StdOutput !(clientId, "Stopping FileObserver " + location)
             exit
         }
       }
@@ -329,7 +321,7 @@ package com.wooga.trazzle.intellij{
       while (true) {
 
         var socket = policyListener.accept()
-
+        println("serving policy file request")
         socket.getOutputStream.write(policy.getBytes(Charset.forName("UTF-8")))
         socket.getOutputStream.flush
         socket.close()
@@ -350,7 +342,9 @@ package com.wooga.trazzle.intellij{
     def act {
       loop {
         react {
+          case (clientId: Int, message: String) => client.log(clientId, message, null, null, 0, 0)
           case (clientId: Int, message: String, level: String, stacktrace: String, timestamp: Number, stackIndex: Int) => client.log(clientId, message, level, stacktrace, timestamp, stackIndex)
+          case _ =>
         }
       }
     }
