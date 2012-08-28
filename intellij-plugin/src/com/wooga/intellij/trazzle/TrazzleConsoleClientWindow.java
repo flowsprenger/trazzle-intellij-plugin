@@ -78,19 +78,22 @@ public class TrazzleConsoleClientWindow extends JPanel implements ActionListener
     }
 
     private ConsoleViewContentType errorLevelToConsoleViewContentType(String level) {
-        switch(level.getBytes()[0])
-        {
-            case 'e': // error
-            case 'f': // fatal
-            case 'c': // critical
-                return ConsoleViewContentType.ERROR_OUTPUT;
-            case 'n': // notice
-            case 'w':  // warning
-                return ConsoleViewContentType.USER_INPUT;
-            case 'i':  // info
-            case 'd':  // debug
-                return ConsoleViewContentType.NORMAL_OUTPUT;
-        }
+         if(level != null)
+         {
+            switch(level.getBytes()[0])
+            {
+                case 'e': // error
+                case 'f': // fatal
+                case 'c': // critical
+                    return ConsoleViewContentType.ERROR_OUTPUT;
+                case 'n': // notice
+                case 'w':  // warning
+                    return ConsoleViewContentType.USER_INPUT;
+                case 'i':  // info
+                case 'd':  // debug
+                    return ConsoleViewContentType.NORMAL_OUTPUT;
+            }
+         }
         return ConsoleViewContentType.NORMAL_OUTPUT;
     }
 
